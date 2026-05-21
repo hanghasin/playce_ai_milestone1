@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { TheMatrix } from '@/components/playce/the-matrix'
+import { PlayceErrorBoundary } from '@/components/playce/PlayceErrorBoundary'
 import type { RefineProfile } from '@/components/playce/the-refine'
 import { normalizeTripRole } from '@/components/playce/the-refine'
 import type { MatrixLocationData } from '@/lib/playce-location-types'
@@ -12,6 +13,7 @@ import {
   destinationSlugsMatch,
 } from '@/lib/playce-confirm-helpers'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
+import { validateLocationGeography } from '@/lib/location-geography-validation'
 import type { SavedJourneyEntry } from '@/components/playce/the-saved-journeys'
 import { PLAYCE_DEFAULT_REFINE, resolveRefineProfile } from '@/lib/playce-default-refine'
 import { refineWithLocationSkill } from '@/lib/playce-refine-from-difficulty'
@@ -65,7 +67,10 @@ export default function ConfirmDestinationPage() {
       const handoff = rawHandoff ? (JSON.parse(rawHandoff) as PlayceConfirmHandoff) : null
 
       if (handoff?.v === 1 && handoff.location) {
-        const locNorm = normalizeMatrixLocation(handoff.location)
+        const locNorm = validateLocationGeography(
+          normalizeMatrixLocation(handoff.location),
+          handoff.timeframeQuery ?? ''
+        )
         const loc: MatrixLocationData = {
           ...locNorm,
           budgetTier:
@@ -99,9 +104,11 @@ export default function ConfirmDestinationPage() {
         locations?: MatrixLocationData[]
       }
       const list = intent.locations ?? []
-      const found = list.map((l) => normalizeMatrixLocation(l)).find((loc) =>
-        destinationSlugsMatch(buildDestinationHandoffSlug(loc), destinationIdRaw)
-      )
+      const found = list
+        .map((l) =>
+          validateLocationGeography(normalizeMatrixLocation(l), typeof intent.query === 'string' ? intent.query : '')
+        )
+        .find((loc) => destinationSlugsMatch(buildDestinationHandoffSlug(loc), destinationIdRaw))
       if (!found) {
         router.replace('/')
         return
@@ -195,18 +202,20 @@ export default function ConfirmDestinationPage() {
 
   return (
     <main className="min-h-screen overflow-x-hidden" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-      <TheMatrix
-        location={payload.location}
-        refine={payload.refine}
-        timeframeQuery={payload.timeframeQuery}
-        isShortlisted={isShortlisted(payload.location)}
-        onBack={handleBack}
-        onToggleShortlist={() => toggleShortlist(payload.location)}
-        onOpenSavedJourneys={handleOpenSavedJourneys}
-        onOpenShortlist={handleOpenShortlist}
-        savedJourneyCount={savedCount}
-        shortlistCount={shortlist.length}
-      />
+      <PlayceErrorBoundary>
+        <TheMatrix
+          location={payload.location}
+          refine={payload.refine}
+          timeframeQuery={payload.timeframeQuery}
+          isShortlisted={isShortlisted(payload.location)}
+          onBack={handleBack}
+          onToggleShortlist={() => toggleShortlist(payload.location)}
+          onOpenSavedJourneys={handleOpenSavedJourneys}
+          onOpenShortlist={handleOpenShortlist}
+          savedJourneyCount={savedCount}
+          shortlistCount={shortlist.length}
+        />
+      </PlayceErrorBoundary>
     </main>
   )
 }

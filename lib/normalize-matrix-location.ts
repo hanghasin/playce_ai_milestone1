@@ -131,6 +131,10 @@ export function normalizeMatrixLocation(loc: MatrixLocationData): MatrixLocation
     conditions: loc.conditions ?? { temp: '18°C' },
     upcomingEvents: sanitizeUpcomingEvents(loc.upcomingEvents),
     whyThisSpotLines: sanitizeWhyThisSpotLines(loc.whyThisSpotLines),
+    about: ensureString(loc.about),
+    shortDescription: ensureString(loc.shortDescription),
+    bestSeason: ensureString(loc.bestSeason) || undefined,
+    typicalWeather: ensureString(loc.typicalWeather) || undefined,
     activityZones: (() => {
       const z = coerceActivityZonesToString(loc.activityZones).trim()
       return z || undefined

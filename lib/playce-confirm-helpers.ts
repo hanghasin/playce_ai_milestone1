@@ -135,8 +135,10 @@ export function confirmBaseNeighborhoodLine(
 
 /** URL-safe slug for /journey/[destinationId] handoff */
 export function buildDestinationHandoffSlug(location: MatrixLocationData): string {
-  const name = location.name.trim().toLowerCase().replace(/\s+/g, '-')
-  const country = location.country.trim().toLowerCase().replace(/\s+/g, '-')
+  const anchor = (location.primaryTitle || location.name || '').trim()
+  const name = anchor.toLowerCase().replace(/\s+/g, '-')
+  const country = (location.country || '').trim().toLowerCase().replace(/\s+/g, '-')
+  if (!name || !country) return encodeURIComponent(`${name || 'destination'}--${country || 'unknown'}`)
   const raw = `${name}--${country}`
   return encodeURIComponent(raw)
 }
@@ -219,7 +221,7 @@ export function scrubActivityZones(text: string | undefined | unknown, location:
 }
 
 export function shortDescriptionFallback(location: MatrixLocationData, refine: RefineProfile): string {
-  const ab = (location.about ?? '').trim()
+  const ab = String(location.about ?? '').trim()
   if (ab && ab.length > 40) return ab.slice(0, 280)
   const role =
     refine.tripRole === 'COMPETITOR'
@@ -231,9 +233,10 @@ export function shortDescriptionFallback(location: MatrixLocationData, refine: R
 }
 
 export function typicalWeatherFallback(location: MatrixLocationData): string {
-  const t = (location.conditions?.temp ?? '').trim()
+  const t = String(location.conditions?.temp ?? '').trim()
   if (t && t.length < 48 && !/water\s*temperature/i.test(t)) return t
-  return `${location.season.split(/[·,]/)[0]?.trim() ?? 'Year-round'}: check live forecasts — humidity shifts daily.`
+  const season = String(location.season ?? 'Year-round')
+  return `${season.split(/[·,]/)[0]?.trim() ?? 'Year-round'}: check live forecasts — humidity shifts daily.`
 }
 
 export function getTrainingSectionTitle(activity: string): string {
@@ -514,7 +517,7 @@ export function formatBestSeasonDisplay(
   bestSeasonRaw: string | undefined,
   seasonFallback: string
 ): string {
-  const rawBase = bestSeasonRaw?.trim() || seasonFallback?.trim() || ''
+  const rawBase = String(bestSeasonRaw ?? '').trim() || String(seasonFallback ?? '').trim() || ''
   const raw = rawBase.slice(0, 120)
   if (!raw) return ''
 
@@ -578,7 +581,8 @@ export function buildConfirmHeroMetaLine(
 }
 
 export function sentenceCase(str: string): string {
-  if (!str) return str
-  const lower = str.toLowerCase()
+  const s = String(str ?? '')
+  if (!s) return s
+  const lower = s.toLowerCase()
   return lower.charAt(0).toUpperCase() + lower.slice(1)
 }

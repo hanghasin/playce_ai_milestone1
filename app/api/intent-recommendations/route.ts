@@ -23,6 +23,8 @@ import {
 } from '@/lib/curated-intent-fallback'
 import { PLAYCE_VOICE_AND_TONE_PROMPT } from '@/lib/playce-voice-tone-prompt'
 import { PLAYCE_SOFT_ERROR, rateLimitUserMessage } from '@/lib/playce-user-facing-errors'
+import { validateLocationGeography } from '@/lib/location-geography-validation'
+import type { MatrixLocationData } from '@/lib/playce-location-types'
 
 type IntentTripRole = 'ACTIVE_TRAVEL' | 'COMPETITOR' | 'WATCHING'
 
@@ -155,6 +157,8 @@ function buildSystemPrompt(): string {
     '',
     'QUALITY RULES:',
     '- Use real places and factual transport/airport data.',
+    '- GEOGRAPHIC ACCURACY: never invent bays, beaches, or ocean access for inland cities. Chaozhou (潮州), Guangdong is inland on the Han River — NOT coastal; never "Chaozhou Bay" or surf there. Match activities to real terrain (inland → hiking, cycling, walking, martial arts; coast → water sports).',
+    '- When the user names a region (e.g. Guangdong), pick real cities/spots that exist on a map and fit the query — verify each primaryTitle is a real place, not a fabricated label.',
     '- Every location MUST set accurate `country`. `locationLabel` must read "Spot or City, Country" (never Destination/Unknown). `name` mirrors the geographic anchor; `primaryTitle` must always be a real place name (see primaryTitle rules above), not an activity label.',
     '- VISA (`visaRequirements`): do NOT generate visa information; always output an empty string \"\". The UI uses a verification link keyed on `country`; never explanatory visa prose.',
     'DAILY BUDGET TIERS — set ALL THREE price bands on EVERY location:',
@@ -1399,7 +1403,10 @@ export async function POST(req: Request) {
 
     const locations = []
     for (let i = 0; i < normalized.length; i += 1) {
-      const enriched = normalized[i]
+      const enriched = validateLocationGeography(
+        { ...(normalized[i] as MatrixLocationData), image: '' },
+        originalQuery
+      )
       const perCardQuery =
         enriched.imageSearchTerm?.trim() ||
         `${enriched.activity} ${enriched.primaryTitle || enriched.name} ${enriched.country}`.trim()

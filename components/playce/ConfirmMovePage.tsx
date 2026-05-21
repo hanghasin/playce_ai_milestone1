@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import Image from 'next/image'
 import {
   ArrowRight,
   Cable,
@@ -171,19 +170,17 @@ export function ConfirmMovePage({
       {/* SECTION 1 HERO */}
       <section className="relative w-full min-h-[520px]">
         <div className="absolute inset-0">
-          {!isHeroImageUrl(loc.image) ? null : (
-            <Image
+          {isHeroImageUrl(loc.image) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={loc.image.trim()}
               alt=""
-              fill
-              className="object-cover object-center"
-              sizes="100vw"
-              priority
+              className="absolute inset-0 h-full w-full object-cover object-center"
               onError={(e) => {
-                ;(e.target as HTMLImageElement).style.display = 'none'
+                e.currentTarget.style.display = 'none'
               }}
             />
-          )}
+          ) : null}
           <div
             className="absolute inset-0"
             style={{
