@@ -28,7 +28,6 @@ import { PLAYCE_CONFIRM_HANDOFF_KEY, type PlayceConfirmHandoff } from '@/lib/pla
 import { refineWithLocationSkill } from '@/lib/playce-refine-from-difficulty'
 import { stripAnyRolePromptSuffix } from '@/lib/playce-role-prompt'
 import { cleanIntentTitle } from '@/lib/intent-title-clean'
-import { PlayceWaitRunnerPanel } from '@/components/playce/PlayceWaitRunner'
 import {
   isLikelyProviderRateLimit,
   PLAYCE_RATE_LIMIT_ERROR,
@@ -615,7 +614,6 @@ function HomePage() {
           >
             Analysing...
           </p>
-          <PlayceWaitRunnerPanel className="w-full max-w-[480px]" />
         </div>
       ) : null}
 

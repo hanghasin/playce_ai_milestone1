@@ -14,8 +14,7 @@ import {
 import { airportFallbackInstruction, primaryAirportsLine } from '@/lib/playce-airport-hints'
 import { stripAnyRolePromptSuffix } from '@/lib/playce-role-prompt'
 import { cleanIntentTitle } from '@/lib/intent-title-clean'
-import { callClaude, cleanJsonText } from '@/lib/claude'
-import { hasGroqApiKeys } from '@/lib/groq-client'
+import { fetchGroqChatWithModelFallback, hasGroqApiKeys } from '@/lib/groq-client'
 import { getCachedResponse, setCachedResponse, buildCacheKey } from '@/lib/cache'
 import {
   buildPortugalSurfCuratedResult,
@@ -275,6 +274,51 @@ function buildSystemPrompt(): string {
   ].join('\n')
 }
 
+function buildCompactSystemPrompt(): string {
+  return [
+    PLAYCE_VOICE_AND_TONE_PROMPT,
+    'Respond with valid JSON only. No markdown. Exactly 3 active-sports travel locations.',
+    'Only physical sports/active travel — never museums, monuments, shopping, or passive sightseeing.',
+    'primaryTitle = real geographic place (Peniche, Ericeira) — never the activity word alone.',
+    'locationLabel = "City, Country". difficulty = Beginner | Intermediate | Pro.',
+    'intentSummary: 4–8 words from the user line only.',
+    'Each location needs: recommendationKind, name, country, activity, season, vibeTags (2–3 unique per card),',
+    'activityDescriptor, imageSearchTerm, whyThisSpot (4 items), tripRhythm, localTransport (3+ real brands),',
+    'budgetEssential, budgetMidrange, budgetLuxe, optimalDurationDays, nearestAirport, visaRequirements=""',
+    '{"intentSummary":"","detectedSkillLevel":null,"locations":[{...}]}',
+  ].join('\n')
+}
+
+const delayMs = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+function isRetryableGroqError(message: string): boolean {
+  return /rate limit|rate_limit|429|tokens per|too many requests|capacity|timeout|quota|502|503|empty_completion/i.test(
+    message
+  )
+}
+
+async function callIntentGroq(systemPrompt: string, userContent: string): Promise<string> {
+  return fetchGroqChatWithModelFallback((model) => ({
+    model,
+    max_tokens: 2048,
+    temperature: 0.6,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+  }))
+}
+
+/** Strip markdown code fences that the model sometimes wraps JSON in. */
+function cleanJsonText(raw: string): string {
+  return raw
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/m, '')
+    .trim()
+}
+
 type IntentMode = 'place_only' | 'activity_only' | 'place_plus_activity'
 
 /** Remove AI or pipeline artifacts like "Cathedral · 1" from card titles. */
@@ -493,6 +537,7 @@ type RaceWhitelistEntry = {
 }
 
 const MARATHON_EVENT_WHITELIST: RaceWhitelistEntry[] = [
+  { sport: 'marathon', city: 'Hong Kong', country: 'Hong Kong', name: 'Hong Kong Marathon', month: 0, region: 'asia', dateLabel: 'January annually', raceTier: 'intermediate', vibe: 'Harbor skyline, Bridge crossings, Subtropical humidity' },
   { sport: 'marathon', city: 'Houston', country: 'United States', name: 'Houston Marathon', month: 0, region: 'north_america', dateLabel: 'Mid January annually', raceTier: 'novice', vibe: 'Flat, Urban heat, Bayou city' },
   { sport: 'marathon', city: 'Marrakech', country: 'Morocco', name: 'Marrakech Marathon', month: 0, region: 'africa', dateLabel: 'Late January annually', raceTier: 'intermediate', vibe: 'Desert mild, Palm groves, Atlas backdrop' },
   { sport: 'marathon', city: 'Dubai', country: 'United Arab Emirates', name: 'Dubai Marathon', month: 0, region: 'middle_east', dateLabel: 'January annually', raceTier: 'novice', vibe: 'Fast flat, Dawn start, Coastal desert' },
@@ -1222,27 +1267,47 @@ export async function POST(req: Request) {
       useEventFallback,
       namedRaceCity
     )
-    try {
-      const raw = await callClaude(systemPrompt, userContent, 4096)
-      const cleaned = cleanJsonText(raw) || stripJsonFence(raw)
-      const rawParsed = JSON.parse(cleaned) as ParsedResponse
-      try {
-        return intentRecommendationsResponseSchema.parse(rawParsed) as ParsedResponse
-      } catch (schemaErr) {
-        console.error('[intent-recommendations] Schema validation failed:', schemaErr)
-        return rawParsed
+
+    const systemPrompts = [buildSystemPrompt(), buildCompactSystemPrompt()]
+
+    for (let pi = 0; pi < systemPrompts.length; pi += 1) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          if (attempt > 0) await delayMs(1500)
+          const raw = await callIntentGroq(systemPrompts[pi]!, userContent)
+          const cleaned = cleanJsonText(raw) || stripJsonFence(raw)
+          const rawParsed = JSON.parse(cleaned) as ParsedResponse
+          try {
+            return intentRecommendationsResponseSchema.parse(rawParsed) as ParsedResponse
+          } catch (schemaErr) {
+            console.error('[intent-recommendations] Schema validation failed:', schemaErr)
+            return rawParsed
+          }
+        } catch (err) {
+          console.error('[intent-recommendations] Groq call failed:', err)
+          lastGroqError = err instanceof Error ? err.message : String(err)
+          if (!isRetryableGroqError(lastGroqError)) break
+        }
       }
-    } catch (err) {
-      console.error('[intent-recommendations] Claude call failed:', err)
-      lastGroqError = err instanceof Error ? err.message : String(err)
-      return null
     }
+    return null
   }
 
-  async function tryCuratedRateLimitFallback() {
-    if (!/rate_limit|429|tokens per day|too many requests/i.test(lastGroqError ?? '')) return null
-    if (!matchesPortugalSurfIntent(originalQuery || prompt)) return null
-    return buildPortugalSurfCuratedResult(originalQuery || prompt, tripRole)
+  async function tryOfflineIntentFallback(): Promise<ParsedResponse | null> {
+    if (matchesPortugalSurfIntent(originalQuery || prompt)) {
+      const curated = await buildPortugalSurfCuratedResult(originalQuery || prompt, tripRole)
+      if (curated && curated.locations.length >= 3) return curated
+    }
+
+    const offlineSeedCards = buildStableRaceSeedCards(prompt, null)
+    if (offlineSeedCards?.length) {
+      return {
+        intentSummary: originalQuery,
+        detectedSkillLevel: null,
+        locations: offlineSeedCards,
+      }
+    }
+    return null
   }
 
   function recommendationErrorResponse() {
@@ -1265,19 +1330,10 @@ export async function POST(req: Request) {
     let parsed = await callForRecommendations(false)
 
     if (!parsed) {
-      const offlineSeedCards = buildStableRaceSeedCards(prompt, null)
-      if (offlineSeedCards?.length) {
-        parsed = {
-          intentSummary: originalQuery,
-          detectedSkillLevel: null,
-          locations: offlineSeedCards,
-        }
+      const offline = await tryOfflineIntentFallback()
+      if (offline) {
+        parsed = offline
       } else {
-        const curated = await tryCuratedRateLimitFallback()
-        if (curated && curated.locations.length >= 3) {
-          setCachedResponse(cacheKey, JSON.stringify(curated))
-          return NextResponse.json(curated)
-        }
         return recommendationErrorResponse()
       }
     }

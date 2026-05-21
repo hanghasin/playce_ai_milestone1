@@ -6,8 +6,6 @@ import { ArrowRight } from 'lucide-react'
 import type { TripRole } from '@/components/playce/the-refine'
 
 import { mergeRolePrompt, ROLE_PROMPT_BY_TRIP } from '@/lib/playce-role-prompt'
-import { isPlayceCapacityError } from '@/lib/playce-user-facing-errors'
-import { PlayceWaitRunnerPanel } from '@/components/playce/PlayceWaitRunner'
 
 interface TheAbyssProps {
   onSubmit: (query: string) => void
@@ -517,9 +515,6 @@ export function TheAbyss({
                 >
                   {intentError}
                 </p>
-                {isPlayceCapacityError(intentError) ? (
-                  <PlayceWaitRunnerPanel />
-                ) : null}
               </div>
             ) : null}
 
