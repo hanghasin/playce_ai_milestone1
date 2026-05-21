@@ -36,6 +36,7 @@ import {
   getConfirmVibeThird,
   getTrainingSectionCTA,
   getTrainingSectionTitle,
+  isHeroImageUrl,
   parseDailyBudgetUsdRange,
   playcePrimaryCtaStyle,
   safetyFeelingLabel,
@@ -170,9 +171,9 @@ export function ConfirmMovePage({
       {/* SECTION 1 HERO */}
       <section className="relative w-full min-h-[520px]">
         <div className="absolute inset-0">
-          {!loc.image ? null : (
+          {!isHeroImageUrl(loc.image) ? null : (
             <Image
-              src={loc.image}
+              src={loc.image.trim()}
               alt=""
               fill
               className="object-cover object-center"

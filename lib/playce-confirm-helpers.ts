@@ -134,8 +134,29 @@ export function confirmBaseNeighborhoodLine(
 
 /** URL-safe slug for /journey/[destinationId] handoff */
 export function buildDestinationHandoffSlug(location: MatrixLocationData): string {
-  const raw = `${location.name.trim()}--${location.country.trim()}`
-  return encodeURIComponent(raw.toLowerCase().replace(/\s+/g, '-'))
+  const name = location.name.trim().toLowerCase().replace(/\s+/g, '-')
+  const country = location.country.trim().toLowerCase().replace(/\s+/g, '-')
+  const raw = `${name}--${country}`
+  return encodeURIComponent(raw)
+}
+
+/** Decode a route param and compare slugs reliably. */
+export function decodeDestinationRouteId(raw: string): string {
+  try {
+    return decodeURIComponent(raw).trim().toLowerCase()
+  } catch {
+    return raw.trim().toLowerCase()
+  }
+}
+
+export function destinationSlugsMatch(a: string, b: string): boolean {
+  return decodeDestinationRouteId(a) === decodeDestinationRouteId(b)
+}
+
+export function isHeroImageUrl(src: string | undefined | null): boolean {
+  const s = src?.trim()
+  if (!s) return false
+  return /^https?:\/\//i.test(s)
 }
 
 function slugForPdfSegment(value: string): string {

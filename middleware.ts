@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/password', '/api/auth', '/_next', '/favicon.ico']
+  const publicPaths = ['/password', '/api/auth', '/_next', '/favicon.ico', '/favicon-32.png', '/apple-icon.png', '/icon']
 
   const isPublic = publicPaths.some((path) => pathname.startsWith(path))
 
@@ -22,5 +22,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|favicon-32.png|apple-icon.png).*)'],
 }

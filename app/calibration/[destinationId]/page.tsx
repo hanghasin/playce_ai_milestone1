@@ -7,7 +7,7 @@ import type { RefineProfile } from '@/components/playce/the-refine'
 import type { MatrixLocationData } from '@/lib/playce-location-types'
 import { PLAYCE_CONFIRM_HANDOFF_KEY, type PlayceConfirmHandoff } from '@/lib/playce-confirm-handoff'
 import { PLAYCE_DEFAULT_REFINE } from '@/lib/playce-default-refine'
-import { buildDestinationHandoffSlug } from '@/lib/playce-confirm-helpers'
+import { buildDestinationHandoffSlug, destinationSlugsMatch } from '@/lib/playce-confirm-helpers'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import { difficultyToSkillLevel } from '@/lib/playce-refine-from-difficulty'
 
@@ -17,18 +17,8 @@ type IntentSession = {
   locations?: MatrixLocationData[]
 }
 
-function decodeRouteId(raw: string): string {
-  try {
-    return decodeURIComponent(raw)
-  } catch {
-    return raw
-  }
-}
-
 function idsMatch(candidate: MatrixLocationData, destinationIdRaw: string): boolean {
-  const expected = decodeRouteId(buildDestinationHandoffSlug(candidate))
-  const fromUrl = decodeRouteId(destinationIdRaw)
-  return expected === fromUrl
+  return destinationSlugsMatch(buildDestinationHandoffSlug(candidate), destinationIdRaw)
 }
 
 export default function CalibrationPage() {

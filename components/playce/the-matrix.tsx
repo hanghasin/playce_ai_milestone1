@@ -808,7 +808,9 @@ function filterUpcomingEventsInWindow(
       if (!range) return null
       // Recurring races should map to the user's searched time window year.
       if (ev.isRecurring) {
-        while (range.end < start) {
+        let guard = 0
+        while (range.end < start && guard < 15) {
+          guard += 1
           range.start = new Date(
             range.start.getFullYear() + 1,
             range.start.getMonth(),

@@ -3,11 +3,16 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Playce AI | Find What Moves You',
-  description: 'Discover your perfect sport and destination with AI-powered recommendations. Not more choices, just the one.',
+  description:
+    'Discover your perfect sport and destination with AI-powered recommendations. Not more choices, just the one.',
+  icons: {
+    icon: [{ url: '/favicon-32.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#000000',
+  themeColor: '#B97A3E',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

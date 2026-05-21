@@ -45,9 +45,28 @@ export function normalizeMatrixLocation(loc: MatrixLocationData): MatrixLocation
 
   return {
     ...loc,
-    name: name || loc.name,
-    country: country || loc.country,
+    name: name || loc.name || 'Destination',
+    country: country || loc.country || 'Unknown region',
     locationLabel: locationLabel || loc.locationLabel,
+    activity: (loc.activity || '').trim() || 'Outdoor activity',
+    season: (loc.season || '').trim() || 'Year-round',
+    difficulty: (loc.difficulty || '').trim() || 'Intermediate',
+    vibe: (loc.vibe || '').trim() || 'Explorer-friendly',
+    image: typeof loc.image === 'string' ? loc.image : '',
+    womenFriendly: loc.womenFriendly ?? 72,
+    soloIndex: loc.soloIndex ?? 72,
+    logistics:
+      Array.isArray(loc.logistics) && loc.logistics.length > 0
+        ? loc.logistics
+        : [`${name || 'BASE'}`.toUpperCase(), 'TRANSPORT', 'LOCAL OPS'],
+    facilities:
+      Array.isArray(loc.facilities) && loc.facilities.length > 0
+        ? loc.facilities
+        : [
+            { name: 'Gear / Rentals', available: true },
+            { name: 'Dining nearby', available: true },
+          ],
+    conditions: loc.conditions ?? { temp: '18°C' },
     activityZones: (() => {
       const z = coerceActivityZonesToString(loc.activityZones).trim()
       return z || undefined

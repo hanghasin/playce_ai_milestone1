@@ -7,7 +7,10 @@ import type { RefineProfile } from '@/components/playce/the-refine'
 import { normalizeTripRole } from '@/components/playce/the-refine'
 import type { MatrixLocationData } from '@/lib/playce-location-types'
 import { PLAYCE_CONFIRM_HANDOFF_KEY, type PlayceConfirmHandoff } from '@/lib/playce-confirm-handoff'
-import { buildDestinationHandoffSlug } from '@/lib/playce-confirm-helpers'
+import {
+  buildDestinationHandoffSlug,
+  destinationSlugsMatch,
+} from '@/lib/playce-confirm-helpers'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import type { SavedJourneyEntry } from '@/components/playce/the-saved-journeys'
 import { PLAYCE_DEFAULT_REFINE } from '@/lib/playce-default-refine'
@@ -16,14 +19,6 @@ import { SAVED_JOURNEYS_RETURN_URL_KEY } from '@/lib/journey-advisor-session'
 
 const SHORTLIST_KEY = 'playce_shortlist'
 const JOURNEYS_KEY = 'playce_saved_journeys'
-
-function decodeRouteId(raw: string): string {
-  try {
-    return decodeURIComponent(raw)
-  } catch {
-    return raw
-  }
-}
 
 export default function ConfirmDestinationPage() {
   const router = useRouter()
@@ -76,8 +71,8 @@ export default function ConfirmDestinationPage() {
           budgetTier:
             handoff.location.budgetTier ?? handoff.refine?.budgetRange ?? locNorm.budgetTier,
         }
-        const expected = decodeRouteId(buildDestinationHandoffSlug(loc))
-        if (expected === decodeRouteId(destinationIdRaw)) {
+        const expected = buildDestinationHandoffSlug(loc)
+        if (destinationSlugsMatch(expected, destinationIdRaw)) {
           const NR = handoff.refine
             ? {
                 ...handoff.refine,
@@ -102,10 +97,9 @@ export default function ConfirmDestinationPage() {
         locations?: MatrixLocationData[]
       }
       const list = intent.locations ?? []
-      const found = list.map((l) => normalizeMatrixLocation(l)).find((loc) => {
-        const expected = decodeRouteId(buildDestinationHandoffSlug(loc))
-        return expected === decodeRouteId(destinationIdRaw)
-      })
+      const found = list.map((l) => normalizeMatrixLocation(l)).find((loc) =>
+        destinationSlugsMatch(buildDestinationHandoffSlug(loc), destinationIdRaw)
+      )
       if (!found) {
         router.replace('/')
         return
@@ -131,6 +125,11 @@ export default function ConfirmDestinationPage() {
         timeframeQuery: typeof intent.query === 'string' ? intent.query : '',
       }
       setPayload(built)
+      try {
+        sessionStorage.setItem(PLAYCE_CONFIRM_HANDOFF_KEY, JSON.stringify(built))
+      } catch {
+        /* ignore quota */
+      }
     } catch {
       router.replace('/')
     }
