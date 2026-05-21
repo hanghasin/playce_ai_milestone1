@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import type { MatrixLocationData } from '@/lib/playce-location-types'
 import type { RefineProfile } from '@/components/playce/the-refine'
 import { airportFallbackInstruction, primaryAirportsLine } from '@/lib/playce-airport-hints'
+import { isUnsplashImageUrl } from '@/lib/location-image'
 
 /** Primary footer CTA — matches Confirm “Confirm this move” button. */
 export const playcePrimaryCtaStyle: CSSProperties = {
@@ -154,9 +155,7 @@ export function destinationSlugsMatch(a: string, b: string): boolean {
 }
 
 export function isHeroImageUrl(src: string | undefined | null): boolean {
-  const s = src?.trim()
-  if (!s) return false
-  return /^https?:\/\//i.test(s)
+  return isUnsplashImageUrl(src)
 }
 
 function slugForPdfSegment(value: string): string {

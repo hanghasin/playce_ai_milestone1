@@ -13,7 +13,7 @@ import {
 } from '@/lib/playce-confirm-helpers'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import type { SavedJourneyEntry } from '@/components/playce/the-saved-journeys'
-import { PLAYCE_DEFAULT_REFINE } from '@/lib/playce-default-refine'
+import { PLAYCE_DEFAULT_REFINE, resolveRefineProfile } from '@/lib/playce-default-refine'
 import { refineWithLocationSkill } from '@/lib/playce-refine-from-difficulty'
 import { SAVED_JOURNEYS_RETURN_URL_KEY } from '@/lib/journey-advisor-session'
 
@@ -73,14 +73,16 @@ export default function ConfirmDestinationPage() {
         }
         const expected = buildDestinationHandoffSlug(loc)
         if (destinationSlugsMatch(expected, destinationIdRaw)) {
-          const NR = handoff.refine
-            ? {
-                ...handoff.refine,
-                tripRole:
-                  normalizeTripRole(handoff.refine.tripRole) ??
-                  PLAYCE_DEFAULT_REFINE.tripRole,
-              }
-            : handoff.refine
+          const NR = resolveRefineProfile(
+            handoff.refine
+              ? {
+                  ...handoff.refine,
+                  tripRole:
+                    normalizeTripRole(handoff.refine.tripRole) ??
+                    PLAYCE_DEFAULT_REFINE.tripRole,
+                }
+              : handoff.refine
+          )
           setPayload({ ...handoff, location: loc, refine: NR })
           return
         }
@@ -106,7 +108,7 @@ export default function ConfirmDestinationPage() {
       }
       const snap = intent.refineSnapshot && typeof intent.refineSnapshot === 'object' ? intent.refineSnapshot : null
       const base: RefineProfile = snap
-        ? {
+        ? resolveRefineProfile({
             skillLevel: snap.skillLevel ?? PLAYCE_DEFAULT_REFINE.skillLevel,
             riskAppetite: snap.riskAppetite ?? PLAYCE_DEFAULT_REFINE.riskAppetite,
             budgetRange: snap.budgetRange ?? PLAYCE_DEFAULT_REFINE.budgetRange,
@@ -114,7 +116,7 @@ export default function ConfirmDestinationPage() {
             duration: snap.duration ?? PLAYCE_DEFAULT_REFINE.duration,
             travelCompany: snap.travelCompany ?? PLAYCE_DEFAULT_REFINE.travelCompany,
             tripRole: normalizeTripRole(snap.tripRole) ?? PLAYCE_DEFAULT_REFINE.tripRole,
-          }
+          })
         : { ...PLAYCE_DEFAULT_REFINE }
 
       const built: PlayceConfirmHandoff = {

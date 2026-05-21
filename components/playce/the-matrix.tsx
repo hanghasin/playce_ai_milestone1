@@ -9,6 +9,7 @@ import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import { activityNeedsHeavyGearRental } from '@/lib/playce-gear-checklist'
 import { dailyBudgetDisplayForTier } from '@/lib/playce-confirm-helpers'
 import { mergeLocalTransportForLocation } from '@/lib/playce-local-transport'
+import { resolveRefineProfile } from '@/lib/playce-default-refine'
 
 interface LocationData {
   name: string
@@ -516,7 +517,8 @@ function buildFallbackWhyThisSpotLines(
   return lines
 }
 
-function generateDynamicContent(location: LocationData, refine: RefineProfile) {
+function generateDynamicContent(location: LocationData, refineInput: RefineProfile) {
+  const refine = resolveRefineProfile(refineInput)
   const { skillLevel, budgetRange } = refine
   const tripDays = refine.duration
     ? (durationToDays[refine.duration] ?? 8)
@@ -665,8 +667,10 @@ function generateDynamicContent(location: LocationData, refine: RefineProfile) {
 
   const whyThisSpotLines =
     location.whyThisSpotLines && location.whyThisSpotLines.length >= 4
-      ? location.whyThisSpotLines
+      ? location.whyThisSpotLines.filter((row) => row?.text && row?.icon)
       : buildFallbackWhyThisSpotLines(location, refine)
+  const safeWhyThisSpotLines =
+    whyThisSpotLines.length >= 4 ? whyThisSpotLines : buildFallbackWhyThisSpotLines(location, refine)
 
   return {
     tripDays,
@@ -683,7 +687,34 @@ function generateDynamicContent(location: LocationData, refine: RefineProfile) {
     stayAreas,
     pricing,
     itinerary,
-    whyThisSpotLines,
+    whyThisSpotLines: safeWhyThisSpotLines,
+  }
+}
+
+function safeGenerateDynamicContent(location: LocationData, refineInput: RefineProfile) {
+  try {
+    return generateDynamicContent(location, refineInput)
+  } catch (err) {
+    console.error('[TheMatrix] dynamic content failed', err)
+    const refine = resolveRefineProfile(refineInput)
+    const tripDays = refine.duration ? (durationToDays[refine.duration] ?? 8) : 8
+    return {
+      tripDays,
+      airportLine: airportLineForLocation(location),
+      accommodationOpsLine: '',
+      prepSectionBlurb: null,
+      gearHeavyRental: false,
+      primaryStayArea: location.name,
+      femaleFriendlyTips: { safety: '', community: '', accommodation: '' },
+      internationalAccess: [],
+      localTransport: [],
+      experiences: [],
+      diningDistricts: [],
+      stayAreas: [],
+      pricing: { daily: '$150-300', equipment: '', lessons: '' },
+      itinerary: [{ day: 1, title: 'Arrival', activities: [`Arrive — ${location.name}`] }],
+      whyThisSpotLines: buildFallbackWhyThisSpotLines(location, refine),
+    }
   }
 }
 
@@ -1058,7 +1089,7 @@ export function TheMatrix({
     [rawLocation]
   )
 
-  const dynamicContent = useMemo(() => generateDynamicContent(location, refine), [location, refine])
+  const dynamicContent = useMemo(() => safeGenerateDynamicContent(location, refine), [location, refine])
   const vibes = useMemo(() => vibeTokens(location.vibe), [location.vibe])
   const queryWindow = useMemo(
     () => parseQueryTimeWindow(timeframeQuery, dynamicContent.tripDays),

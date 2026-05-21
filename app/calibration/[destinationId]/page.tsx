@@ -6,7 +6,7 @@ import { TheRefine } from '@/components/playce/the-refine'
 import type { RefineProfile } from '@/components/playce/the-refine'
 import type { MatrixLocationData } from '@/lib/playce-location-types'
 import { PLAYCE_CONFIRM_HANDOFF_KEY, type PlayceConfirmHandoff } from '@/lib/playce-confirm-handoff'
-import { PLAYCE_DEFAULT_REFINE } from '@/lib/playce-default-refine'
+import { PLAYCE_DEFAULT_REFINE, resolveRefineProfile } from '@/lib/playce-default-refine'
 import { buildDestinationHandoffSlug, destinationSlugsMatch } from '@/lib/playce-confirm-helpers'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import { difficultyToSkillLevel } from '@/lib/playce-refine-from-difficulty'
@@ -117,7 +117,7 @@ export default function CalibrationPage() {
         v: 1,
         destinationId: slug,
         location: { ...resolved.location, budgetTier: profile.budgetRange },
-        refine: profile,
+        refine: resolveRefineProfile(profile),
         timeframeQuery: resolved.timeframeQuery,
       }
       try {

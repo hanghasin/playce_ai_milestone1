@@ -535,9 +535,11 @@ export function ConfirmMovePage({
             WHY THIS SPOT
           </p>
           <ul className="m-0 list-none p-0">
-            {dynamicContent.whyThisSpotLines.map((row, idx) => (
+            {(dynamicContent.whyThisSpotLines ?? [])
+              .filter((row) => row?.text)
+              .map((row, idx) => (
               <li
-                key={`${row.text.slice(0, 24)}-${idx}`}
+                key={`why-${idx}-${String(row.text).slice(0, 24)}`}
                 className="flex items-start gap-[14px] border-b border-[var(--border)] py-3"
               >
                 <span className="shrink-0 pt-px text-[16px] leading-none" aria-hidden>
@@ -611,7 +613,7 @@ export function ConfirmMovePage({
                       <h3 className="mb-2 font-serif text-base font-normal md:text-[16px]" style={{ color: 'var(--text-primary)' }}>
                         {day.title}
                       </h3>
-                      {day.activities.map((act, i) => {
+                      {(day.activities ?? []).map((act, i) => {
                         const bright = i === 0
                         return (
                           <div key={`${day.day}-${i}`} className="mb-1.5 flex items-start gap-2.5">
@@ -707,7 +709,7 @@ function WhyThisSpotRichText({ text, boldPhrase }: { text: string; boldPhrase?: 
 }
 
 function SuggestedItineraryDayPreview({ day }: { day: { day: number; title: string; activities: string[] } }) {
-  const previewActs = day.activities.slice(0, 2)
+  const previewActs = (day.activities ?? []).slice(0, 2)
   return (
     <div className="flex gap-5 pb-2">
       <span
