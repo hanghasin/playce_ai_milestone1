@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { playcePrimaryCtaStyle } from '@/lib/playce-confirm-helpers'
 
 export default function PasswordPage() {
   const [input, setValue] = useState('')
@@ -27,7 +28,7 @@ export default function PasswordPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#0a0a0a',
+        background: 'var(--bg)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -37,14 +38,15 @@ export default function PasswordPage() {
     >
       <p
         style={{
-          fontFamily: 'Georgia, serif',
-          fontSize: '24px',
-          color: '#ffffff',
-          letterSpacing: '0.15em',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 400,
+          fontSize: '14px',
+          color: 'var(--text-primary)',
+          letterSpacing: '0.25em',
           textTransform: 'uppercase',
         }}
       >
-        PLAYCE
+        Playce
       </p>
 
       <div
@@ -67,20 +69,23 @@ export default function PasswordPage() {
           autoFocus
           style={{
             background: 'transparent',
-            border: `1px solid ${error ? 'rgba(220,80,80,0.5)' : 'rgba(255,255,255,0.15)'}`,
-            borderRadius: '2px',
-            color: '#ffffff',
+            border: `1px solid ${error ? 'rgba(220,80,80,0.5)' : 'var(--border)'}`,
+            borderRadius: 'var(--radius)',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 300,
             fontSize: '14px',
             padding: '12px 16px',
             outline: 'none',
             width: '100%',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.02em',
           }}
         />
 
         {error && (
           <p
             style={{
+              fontFamily: 'var(--font-body)',
               fontSize: '12px',
               color: 'rgba(220,80,80,0.7)',
               textAlign: 'center',
@@ -93,16 +98,11 @@ export default function PasswordPage() {
         <button
           onClick={handleSubmit}
           style={{
-            background: '#C17D3C',
+            ...playcePrimaryCtaStyle,
             border: 'none',
-            borderRadius: '2px',
-            color: '#1a0e00',
-            fontSize: '13px',
-            fontWeight: 600,
-            padding: '12px',
             cursor: 'pointer',
             width: '100%',
-            letterSpacing: '0.03em',
+            padding: '12px',
           }}
         >
           Enter →
@@ -111,8 +111,9 @@ export default function PasswordPage() {
 
       <p
         style={{
+          fontFamily: 'var(--font-body)',
           fontSize: '11px',
-          color: 'rgba(255,255,255,0.2)',
+          color: 'var(--text-muted)',
           textAlign: 'center',
           maxWidth: '240px',
           lineHeight: 1.6,
