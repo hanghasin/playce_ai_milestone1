@@ -4,6 +4,28 @@ import type { RefineProfile } from '@/components/playce/the-refine'
 import { airportFallbackInstruction, primaryAirportsLine } from '@/lib/playce-airport-hints'
 import { isUnsplashImageUrl } from '@/lib/location-image'
 
+/** API/session may send numbers or objects where UI expects strings — safe coerce. */
+export function coerceTextField(raw: unknown, maxLen?: number): string {
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    return maxLen ? t.slice(0, maxLen) : t
+  }
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    const t = `$${Math.round(raw)} / day`
+    return maxLen ? t.slice(0, maxLen) : t
+  }
+  if (raw == null) return ''
+  const t = String(raw).trim()
+  return maxLen ? t.slice(0, maxLen) : t
+}
+
+/** Budget / neighborhood lines — drop placeholder tokens. */
+export function coerceBudgetText(raw: unknown, maxLen = 80): string {
+  const t = coerceTextField(raw, maxLen)
+  if (!t || /^(none|null|n\/a|nil)$/i.test(t)) return ''
+  return t
+}
+
 /** Primary footer CTA — matches Confirm “Confirm this move” button. */
 export const playcePrimaryCtaStyle: CSSProperties = {
   background: '#C17D3C',
@@ -37,7 +59,7 @@ export function visaRequirementsGoogleHref(destinationCountry: string): string {
 export function airportFactLineForLocation(
   loc: Pick<MatrixLocationData, 'name' | 'country' | 'nearestAirport'>
 ): string {
-  const fromCard = loc.nearestAirport?.trim()
+  const fromCard = coerceTextField(loc.nearestAirport)
   if (fromCard && !/^main airport\b/i.test(fromCard)) return fromCard
   return primaryAirportsLine(loc.name, loc.country) || airportFallbackInstruction(loc.name, loc.country)
 }
@@ -53,12 +75,12 @@ export function dailyBudgetDisplayForTier(
     budgetRange
   let line =
     tier === 'LUXE'
-      ? loc.budgetLuxe?.trim()
+      ? coerceBudgetText(loc.budgetLuxe)
       : tier === 'MID-RANGE'
-        ? loc.budgetMidrange?.trim()
-        : loc.budgetEssential?.trim()
-  if (!line || /^(none|null|n\/a)$/i.test(line)) line = loc.dailyBudget?.trim() || ''
-  if (!line || /^(none|null|n\/a)$/i.test(line)) line = heuristicFallback
+        ? coerceBudgetText(loc.budgetMidrange)
+        : coerceBudgetText(loc.budgetEssential)
+  if (!line) line = coerceBudgetText(loc.dailyBudget)
+  if (!line) line = heuristicFallback
   return line.slice(0, 80)
 }
 
@@ -70,7 +92,7 @@ export function formatTripBudgetTotalEstimate(
   heuristicFallback: string
 ): string {
   const dailyLine =
-    loc.budgetEssential?.trim() ||
+    coerceBudgetText(loc.budgetEssential) ||
     dailyBudgetDisplayForTier(loc, budgetRange, heuristicFallback)
   const range = parseDailyBudgetUsdRange(dailyLine)
   if (!range || durationDays <= 0) return dailyLine || '—'
@@ -113,11 +135,11 @@ export function confirmBaseNeighborhoodLine(
     budgetRange
   let area =
     tier === 'LUXE'
-      ? loc.luxeNeighborhood?.trim()
+      ? coerceBudgetText(loc.luxeNeighborhood, 140)
       : tier === 'MID-RANGE'
-        ? loc.midrangeNeighborhood?.trim()
-        : loc.budgetNeighborhood?.trim()
-  if (!area) area = stayAreaFallback?.trim() || ''
+        ? coerceBudgetText(loc.midrangeNeighborhood, 140)
+        : coerceBudgetText(loc.budgetNeighborhood, 140)
+  if (!area) area = coerceTextField(stayAreaFallback, 140)
 
   const place = `${loc.name}`.trim()
 
@@ -229,7 +251,7 @@ export function shortDescriptionFallback(location: MatrixLocationData, refine: R
       : refine.tripRole === 'WATCHING'
         ? 'Watching or crewing logistics—vantage, ticketing, cheer hops, and reunion anchors matter more than your own mileage'
         : 'Training-friendly rhythm is easy to hold'
-  return `${location.name} pairs ${location.activity.toLowerCase()} access with a workable urban trail and recovery scene. ${role} once you lock a realistic daily loop near your stay.`
+  return `${location.name} pairs ${coerceTextField(location.activity).toLowerCase()} access with a workable urban trail and recovery scene. ${role} once you lock a realistic daily loop near your stay.`
 }
 
 export function typicalWeatherFallback(location: MatrixLocationData): string {
@@ -240,7 +262,7 @@ export function typicalWeatherFallback(location: MatrixLocationData): string {
 }
 
 export function getTrainingSectionTitle(activity: string): string {
-  const a = activity.toLowerCase()
+  const a = coerceTextField(activity).toLowerCase()
   if (/\b(marathon|triathlon|half[\s-]marathon|trail race|ultramarathon|race)\b/.test(a)) return 'TRAINING & SESSIONS'
   if (/\b(surf|ski|snowboard|kayak|paddle|sup\b|scuba|dive)\b/.test(a)) return 'ACTIVITIES & RENTALS'
   if (/\b(yoga|muay|bjj|martial|crossfit|climb|boulder|pilates)\b/.test(a)) return 'CLASSES & COACHING'
@@ -252,7 +274,7 @@ export function getTrainingSectionCTA(
   location: MatrixLocationData,
   budgetRange: RefineProfile['budgetRange'] = 'MID-RANGE'
 ): { label: string; href: string } {
-  const al = location.activity.toLowerCase()
+  const al = coerceTextField(location.activity).toLowerCase()
   const races = [
     'marathon',
     'triathlon',
@@ -264,7 +286,7 @@ export function getTrainingSectionCTA(
     'spartan',
   ]
   if (races.some((r) => al.includes(r))) {
-    const destinationName = location.name.trim()
+    const destinationName = coerceTextField(location.name)
     return {
       label: `Find running routes in ${destinationName}`,
       href: `https://www.google.com/maps/search/${encodeURIComponent(`running routes ${destinationName}`)}`,
@@ -277,8 +299,8 @@ export function getActivityCTA(
   location: MatrixLocationData,
   budgetRange: RefineProfile['budgetRange'] = 'MID-RANGE'
 ): { label: string; href: string } {
-  const activity = location.activity
-  const destinationName = location.name
+  const activity = coerceTextField(location.activity)
+  const destinationName = coerceTextField(location.name)
   const rentals = ['surf', 'ski', 'snowboard', 'kayak', 'cycling', 'mtb', 'paddleboard', 'kitesurfing', 'scuba']
   const races = ['marathon', 'triathlon', 'trail run', 'trail race', 'ultramarathon', 'half marathon', 'obstacle course', 'spartan']
   const classes = ['yoga', 'meditation', 'muay thai', 'bjj', 'martial arts', 'crossfit', 'climbing', 'bouldering']
@@ -575,8 +597,8 @@ export function buildConfirmHeroMetaLine(
   tripDays: number,
   dailyBudgetFallback: string
 ): string {
-  const difficulty = sentenceCase((location.difficulty || refine.skillLevel || '').trim() || refine.skillLevel)
-  const activity = sentenceCase(location.activity?.trim() || 'Travel')
+  const difficulty = sentenceCase(coerceTextField(location.difficulty) || refine.skillLevel)
+  const activity = sentenceCase(coerceTextField(location.activity) || 'Travel')
   return `${sentenceCase(location.season)} · ${activity} · ${difficulty} · ${budgetLabel(refine, dailyBudgetFallback)} · ${tripDays} days`
 }
 

@@ -7,7 +7,7 @@ import type { MatrixLocationData, LocalTransportDetail } from '@/lib/playce-loca
 import { airportFallbackInstruction, primaryAirportsLine } from '@/lib/playce-airport-hints'
 import { normalizeMatrixLocation } from '@/lib/normalize-matrix-location'
 import { activityNeedsHeavyGearRental } from '@/lib/playce-gear-checklist'
-import { dailyBudgetDisplayForTier } from '@/lib/playce-confirm-helpers'
+import { dailyBudgetDisplayForTier, coerceTextField } from '@/lib/playce-confirm-helpers'
 import { mergeLocalTransportForLocation } from '@/lib/playce-local-transport'
 import { resolveRefineProfile } from '@/lib/playce-default-refine'
 
@@ -80,13 +80,13 @@ interface LocationData {
 }
 
 function airportLineForLocation(location: LocationData): string {
-  const fromCard = location.nearestAirport?.trim()
+  const fromCard = coerceTextField(location.nearestAirport)
   if (fromCard && !/^main airport\b/i.test(fromCard)) return fromCard
   return primaryAirportsLine(location.name, location.country) || airportFallbackInstruction(location.name, location.country)
 }
 
 function raceLikeLocation(location: LocationData): boolean {
-  const act = location.activity.toLowerCase()
+  const act = coerceTextField(location.activity).toLowerCase()
   const events = (location.upcomingEvents ?? []).map((e) => e.name).join(' ')
   const blob = `${act} ${events}`.toLowerCase()
   return /\b(marathon|half[\s-]marathon|ultra|triathlon|10\s*km|gran fondo|sportive)\b/.test(blob)

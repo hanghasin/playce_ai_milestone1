@@ -135,10 +135,18 @@ export const intentRecommendationsResponseSchema = z.object({
 export type IntentRecommendationsResponse = z.infer<typeof intentRecommendationsResponseSchema>
 
 
-function coerceBudgetLine(raw?: string | null): string | undefined {
-  const t = (raw ?? '').trim()
-  if (!t) return undefined
-  if (/^(none|n\/a|null|nil)$/i.test(t)) return undefined
+function coerceBudgetLine(raw?: unknown): string | undefined {
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (!t || /^(none|n\/a|null|nil)$/i.test(t)) return undefined
+    return t.slice(0, 140)
+  }
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return `$${Math.round(raw)} / day`.slice(0, 140)
+  }
+  if (raw == null) return undefined
+  const t = String(raw).trim()
+  if (!t || /^(none|n\/a|null|nil)$/i.test(t)) return undefined
   return t.slice(0, 140)
 }
 

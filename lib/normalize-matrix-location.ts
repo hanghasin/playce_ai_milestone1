@@ -1,5 +1,5 @@
 import type { MatrixLocationData } from '@/lib/playce-location-types'
-import { coerceActivityZonesToString } from '@/lib/playce-confirm-helpers'
+import { coerceActivityZonesToString, coerceBudgetText } from '@/lib/playce-confirm-helpers'
 import { isUnsplashImageUrl } from '@/lib/location-image'
 import {
   inferCountryFromPlaceName,
@@ -135,6 +135,14 @@ export function normalizeMatrixLocation(loc: MatrixLocationData): MatrixLocation
     shortDescription: ensureString(loc.shortDescription),
     bestSeason: ensureString(loc.bestSeason) || undefined,
     typicalWeather: ensureString(loc.typicalWeather) || undefined,
+    budgetEssential: coerceBudgetText(loc.budgetEssential) || undefined,
+    budgetMidrange: coerceBudgetText(loc.budgetMidrange) || undefined,
+    budgetLuxe: coerceBudgetText(loc.budgetLuxe) || undefined,
+    dailyBudget: coerceBudgetText(loc.dailyBudget) || undefined,
+    budgetNeighborhood: coerceBudgetText(loc.budgetNeighborhood, 140) || undefined,
+    midrangeNeighborhood: coerceBudgetText(loc.midrangeNeighborhood, 140) || undefined,
+    luxeNeighborhood: coerceBudgetText(loc.luxeNeighborhood, 140) || undefined,
+    nearestAirport: ensureString(loc.nearestAirport) || undefined,
     activityZones: (() => {
       const z = coerceActivityZonesToString(loc.activityZones).trim()
       return z || undefined
